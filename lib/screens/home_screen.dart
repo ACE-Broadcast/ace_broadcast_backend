@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onNavigationChanged(int index) {
     setState(() {
-      _selectedIndex = index; // Update the selected index
+      _selectedIndex = index;
     });
   }
 
@@ -73,17 +73,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('API Response: $data'); 
+        print('API Response: $data');
         final List<dynamic> messagesData = data['data'] ?? [];
-        print('Messages Data: $messagesData'); 
+        print('Messages Data: $messagesData');
         setState(() {
           messages = messagesData
               .map((json) => Message.fromJson(json))
               .toList()
               .reversed
-              .toList(); 
+              .toList();
         });
-        
       } else {
         print('Error Status Code: ${response.statusCode}');
         print('Error Response: ${response.body}');
@@ -318,30 +317,48 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showCreatePostDialog(BuildContext context) {
     Future<void> _postMessage() async {
       try {
+        // Validate message is not empty
+        if (_messageController.text.trim().isEmpty) {
+          throw Exception('Please enter a message');
+        }
+
         final response = await http.post(
-          Uri.parse(
-              'http://192.168.2.106:5000/api/post/postMsg'), // Replace with your API endpoint
+          Uri.parse('http://192.168.2.106:5000/api/post/postMsg'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({
             "Username": widget.userName,
-            'Message': _messageController.text,
+            'Message': _messageController.text.trim(),
           }),
         );
 
         if (response.statusCode == 201) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Message posted successfully!')),
-            );
-            Navigator.pop(context);
+          final responseData = json.decode(response.body);
+          if (responseData['success'] == true) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Message posted successfully!')),
+              );
+              Navigator.pop(context);
+              _messageController.clear();
+              await _fetchMessages();
+            }
+          } else {
+            throw Exception(responseData['error'] ?? 'Failed to post message');
           }
         } else {
-          throw Exception('Failed to post message');
+          print('Response Status Code: ${response.statusCode}');
+          print('Response Body: ${response.body}');
+          throw Exception('Server error: ${response.statusCode}');
         }
       } catch (e) {
         if (context.mounted) {
+          print('Error details: $e'); // Log error for debugging
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}')),
+            SnackBar(
+              content:
+                  Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -409,20 +426,23 @@ class _HomeScreenState extends State<HomeScreen> {
 class Message {
   final String username;
   final String message;
-   final DateTime timestamp;
+  final DateTime timestamp;
 
-  Message({required this.username, required this.message , required this.timestamp});
+  Message(
+      {required this.username, required this.message, required this.timestamp});
 
   factory Message.fromJson(Map<String, dynamic> json) {
     print('Raw JSON: $json');
     return Message(
-      username: json['username'] ?? '', 
+      username: json['username'] ?? '',
       message: json['message'] ?? '',
-      timestamp: DateTime.parse(json['timestamp'] ?? 'Just Now',),
+      timestamp: DateTime.parse(
+        json['timestamp'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
-    String getFormattedTimestamp() {
-    final formatter = new DateFormat('MMM dd, yyyy hh:mm a');
+  String getFormattedTimestamp() {
+    final formatter = DateFormat('MMM dd, yyyy hh:mm a');
     return formatter.format(timestamp);
   }
 }
