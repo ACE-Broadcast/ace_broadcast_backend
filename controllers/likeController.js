@@ -1,14 +1,23 @@
 const Like = require('../models/Like');
 
 const likeController = {
-  // Check if a user has liked a post
-  checkLike: async (req, res) => {
+  // Get likes info for a post
+  getLikesInfo: async (req, res) => {
     try {
-      const { postId, email } = req.params;
-      const like = await Like.findOne({ postId, email });
-      res.json({ liked: !!like });
+      const { postId } = req.params;
+      const likes = await Like.find({ postId }).select('email -_id');
+      const likesList = likes.map(like => like.email);
+      
+      res.json({
+        success: true,
+        likes: likesList,
+        likesCount: likesList.length
+      });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
     }
   },
 
@@ -20,31 +29,47 @@ const likeController = {
       const existingLike = await Like.findOne({ postId, email });
       
       if (existingLike) {
+        // Unlike: Remove the like
         await Like.deleteOne({ postId, email });
       } else {
+        // Like: Add new like
         await Like.create({ postId, email });
       }
 
-      // Get updated likes count
-      const likesCount = await Like.countDocuments({ postId });
+      // Get updated likes info
+      const likes = await Like.find({ postId }).select('email -_id');
+      const likesList = likes.map(like => like.email);
       
       res.json({
-        liked: !existingLike,
-        likesCount
+        success: true,
+        isLiked: !existingLike,
+        likes: likesList,
+        likesCount: likesList.length,
+        message: existingLike ? 'Post unliked' : 'Post liked'
       });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
     }
   },
 
-  // Get likes count for a post
-  getLikesCount: async (req, res) => {
+  // Check if user has liked a post
+  checkLike: async (req, res) => {
     try {
-      const { postId } = req.params;
-      const likesCount = await Like.countDocuments({ postId });
-      res.json({ likesCount });
+      const { postId, email } = req.params;
+      const like = await Like.findOne({ postId, email });
+      
+      res.json({
+        success: true,
+        isLiked: !!like
+      });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
     }
   }
 };

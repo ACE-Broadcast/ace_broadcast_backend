@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const likeController = require('../controllers/likeController');
 
-// Check if a user has liked a post
-router.get('/checkLike/:postId/:email', likeController.checkLike);
+// Get likes info for a post (count and list)
+router.get('/posts/:postId', likeController.getLikesInfo);
 
 // Toggle like status
 router.post('/postLike', likeController.toggleLike);
 
-// Get likes count for a post
-router.get('/posts/:postId/likes', likeController.getLikesCount);
+// Check if user has liked a post
+router.get('/checkLike/:postId/:email', likeController.checkLike);
 
 module.exports = router; 
