@@ -9,6 +9,16 @@ const postMessage = mongoose.Schema({
         type :String,
         required : true
     },
+    images: [{
+        url: {
+            type: String,
+            required: true
+        },
+        publicId: {
+            type: String,
+            required: true
+        }
+    }],
     timestamp: {
         type: Date,
         default: Date.now
