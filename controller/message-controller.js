@@ -54,5 +54,4 @@ const getMessage = async (req, res) => {
     }
 }
 
-
 module.exports = { message, getMessage };

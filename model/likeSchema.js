@@ -4,14 +4,16 @@ const LikeSchema = mongoose.Schema({
     email: {
         type: String,
         required: true,
-        index: true 
+        index: true
     },
     likedPosts: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'PostMessage' 
+        postId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'PostMessage'
+        }
     }]
 }, {
-    timestamps: true 
+    timestamps: true
 });
 
 LikeSchema.index({ email: 1, 'likedPosts': 1 }, { unique: true });
