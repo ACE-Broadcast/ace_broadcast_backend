@@ -13,33 +13,45 @@ const message = async (req, res) => {
     try {
         const { Username, Message } = req.body;
 
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ message: 'No images provided' });
-        }
-
-        const uploadPromises = req.files.map(file =>
-            cloudinary.uploader.upload(file.path, {
-                folder: 'images',
-                resource_type: 'auto'
-            })
-        );
-
-        const results = await Promise.all(uploadPromises);
-
-        const imageArray = results.map(result => ({
-            url: result.secure_url,
-            publicId: result.public_id
-        }));
-
         if (!Username || !Message) {
-            res.status(400).json({ message: "Please fill provided fields" });
+            return res.status(400).json({ message: "Please fill provided fields" });
         }
 
-        const postData = await PostMsg.create({ username: Username, message: Message, images: imageArray });
-        req.files.forEach(file => {
-            fs.unlinkSync(file.path);
+        let imageArray = [];
+        
+        // Only process images if files were uploaded
+        if (req.files && req.files.length > 0) {
+            const uploadPromises = req.files.map(file =>
+                cloudinary.uploader.upload(file.path, {
+                    folder: 'images',
+                    resource_type: 'auto'
+                })
+            );
+
+            const results = await Promise.all(uploadPromises);
+
+            imageArray = results.map(result => ({
+                url: result.secure_url,
+                publicId: result.public_id
+            }));
+
+            // Clean up uploaded files
+            req.files.forEach(file => {
+                fs.unlinkSync(file.path);
+            });
+        }
+
+        const postData = await PostMsg.create({ 
+            username: Username, 
+            message: Message, 
+            images: imageArray 
         });
-        res.status(200).json({ success: true, message: "Successfully Post", data: postData });
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Successfully Post", 
+            data: postData 
+        });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
