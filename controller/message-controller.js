@@ -59,8 +59,30 @@ const message = async (req, res) => {
 
 const getMessage = async (req, res) => {
     try {
-        const messages = await PostMsg.find().sort({ timestamp: -1 });
-        res.status(200).json({ success: true, data: messages });
+        // Get page and limit from query parameters, set defaults if not provided
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Get total count of messages
+        const totalMessages = await PostMsg.countDocuments();
+        
+        // Get paginated messages
+        const messages = await PostMsg.find()
+            .sort({ timestamp: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({ 
+            success: true, 
+            data: messages,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalMessages / limit),
+                totalMessages: totalMessages,
+                messagesPerPage: limit
+            }
+        });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
